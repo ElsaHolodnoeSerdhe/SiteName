@@ -10,7 +10,10 @@
         .active { display: block; }
         input, button { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; }
         button { background: #4285F4; color: white; border: none; cursor: pointer; }
+        button:disabled { background: #cccccc; cursor: not-allowed; }
         .error { color: red; }
+        .success { color: green; }
+        .timer { color: #666; font-size: 14px; }
     </style>
 </head>
 <body>
@@ -18,61 +21,96 @@
     <div id="step1" class="step active">
         <h2>Введите ваш email</h2>
         <input type="email" id="email" placeholder="example@gmail.com" required>
-        <button onclick="sendCode()">Отправить код</button>
+        <button id="sendBtn" onclick="sendCode()">Отправить код</button>
+        <p id="timerInfo" class="timer"></p>
         <p id="emailError" class="error"></p>
+        <p id="emailSuccess" class="success"></p>
     </div>
 
     <!-- Шаг 2: Ввод кода -->
     <div id="step2" class="step">
         <h2>Введите код подтверждения</h2>
-        <input type="text" id="verificationCode" placeholder="123456">
+        <input type="text" id="verificationCode" placeholder="123456" maxlength="6">
         <button onclick="verifyCode()">Подтвердить</button>
         <p id="codeError" class="error"></p>
+        <p><a href="#" onclick="resetForm()">Ввести другой email</a></p>
     </div>
 
     <script>
         let generatedCode = "";
+        let timerInterval;
+        let timeLeft = 60; // 60 секунд таймер
+
         const email = document.getElementById("email");
         const emailError = document.getElementById("emailError");
+        const emailSuccess = document.getElementById("emailSuccess");
+        const sendBtn = document.getElementById("sendBtn");
+        const timerInfo = document.getElementById("timerInfo");
         const codeError = document.getElementById("codeError");
 
+        // Таймер обратного отсчета
+        function startTimer() {
+            sendBtn.disabled = true;
+            timerInfo.textContent = `Повторная отправка через: ${timeLeft} сек.`;
+            
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timerInfo.textContent = `Повторная отправка через: ${timeLeft} сек.`;
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    sendBtn.disabled = false;
+                    timerInfo.textContent = "";
+                    timeLeft = 60;
+                }
+            }, 1000);
+        }
+
         // Отправка кода
-        function sendCode() {
+        async function sendCode() {
             const userEmail = email.value.trim();
+            emailError.textContent = "";
+            emailSuccess.textContent = "";
             
             // Проверка домена
             if (!userEmail.endsWith("@gmail.com") && !userEmail.endsWith("@indigobook.com")) {
-                emailError.textContent = "Только Gmail или Indigobook!";
+                emailError.textContent = "Только для email @gmail.com или @indigobook.com!";
                 return;
             }
 
             // Генерация 6-значного кода
             generatedCode = Math.floor(100000 + Math.random() * 900000);
             
-            // Отправка через FormSubmit
-            fetch("https://formsubmit.co/ajax/ВАШ_EMAIL@gmail.com", {
-                method: "POST",
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({
-                    email: userEmail,
-                    _subject: "Код подтверждения",
-                    _autoresponse: `Ваш код подтверждения: ${generatedCode}`,
-                    _template: "plain"
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
+            try {
+                // Отправка через FormSubmit
+                const response = await fetch("https://formsubmit.co/ajax/t58516658@gmail.com", {
+                    method: "POST",
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: userEmail,
+                        _subject: "Код подтверждения",
+                        _autoresponse: `Ваш код подтверждения: ${generatedCode}\n\nКод действителен 10 минут.`,
+                        _template: "plain",
+                        _replyto: userEmail
+                    })
+                });
+
+                const data = await response.json();
+                
                 if (data.success) {
+                    emailSuccess.textContent = "Код отправлен! Проверьте вашу почту.";
                     document.getElementById("step1").classList.remove("active");
                     document.getElementById("step2").classList.add("active");
+                    startTimer(); // Запускаем таймер
+                } else {
+                    emailError.textContent = "Ошибка отправки. Попробуйте позже.";
                 }
-            })
-            .catch(error => {
-                emailError.textContent = "Ошибка отправки: " + error;
-            });
+            } catch (error) {
+                emailError.textContent = "Ошибка соединения: " + error.message;
+            }
         }
 
         // Проверка кода
@@ -80,11 +118,23 @@
             const userCode = document.getElementById("verificationCode").value;
             
             if (userCode === generatedCode.toString()) {
-                alert("Email подтвержден!");
-                // Здесь можно отправить данные на сервер
+                alert("Email успешно подтвержден!");
+                // Здесь можно отправить данные на сервер или перейти дальше
             } else {
-                codeError.textContent = "Неверный код!";
+                codeError.textContent = "Неверный код! Проверьте почту и попробуйте снова.";
             }
+        }
+
+        // Сброс формы
+        function resetForm() {
+            clearInterval(timerInterval);
+            document.getElementById("step2").classList.remove("active");
+            document.getElementById("step1").classList.add("active");
+            document.getElementById("verificationCode").value = "";
+            codeError.textContent = "";
+            sendBtn.disabled = false;
+            timeLeft = 60;
+            timerInfo.textContent = "";
         }
     </script>
 </body>
