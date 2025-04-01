@@ -3,106 +3,89 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Регистрация</title>
+    <title>Подтверждение email</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 500px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        .form-group {
-            margin-bottom: 15px;
-        }
-        input {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
-        button {
-            background: #4285F4;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 4px;
-            cursor: pointer;
-            width: 100%;
-        }
-        .error {
-            color: red;
-            font-size: 14px;
-            margin-top: 5px;
-        }
-        .success {
-            color: green;
-            font-size: 14px;
-            margin-top: 5px;
-        }
+        body { font-family: Arial, sans-serif; max-width: 400px; margin: 0 auto; padding: 20px; }
+        .step { display: none; }
+        .active { display: block; }
+        input, button { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; }
+        button { background: #4285F4; color: white; border: none; cursor: pointer; }
+        .error { color: red; }
     </style>
 </head>
 <body>
-    <h1>Регистрация</h1>
-    <p>Только для email @gmail.com или @indigobook.com</p>
+    <!-- Шаг 1: Ввод email -->
+    <div id="step1" class="step active">
+        <h2>Введите ваш email</h2>
+        <input type="email" id="email" placeholder="example@gmail.com" required>
+        <button onclick="sendCode()">Отправить код</button>
+        <p id="emailError" class="error"></p>
+    </div>
 
-    <form id="registrationForm">
-        <div class="form-group">
-            <input type="email" id="email" name="email" placeholder="Введите ваш email" required>
-            <div id="emailError" class="error"></div>
-        </div>
-
-        <button type="submit">Зарегистрироваться</button>
-    </form>
+    <!-- Шаг 2: Ввод кода -->
+    <div id="step2" class="step">
+        <h2>Введите код подтверждения</h2>
+        <input type="text" id="verificationCode" placeholder="123456">
+        <button onclick="verifyCode()">Подтвердить</button>
+        <p id="codeError" class="error"></p>
+    </div>
 
     <script>
-        const form = document.getElementById("registrationForm");
-        const emailInput = document.getElementById("email");
+        let generatedCode = "";
+        const email = document.getElementById("email");
         const emailError = document.getElementById("emailError");
+        const codeError = document.getElementById("codeError");
 
-        form.addEventListener("submit", function(e) {
-            e.preventDefault();
-            
-            const email = emailInput.value.trim().toLowerCase();
-            const allowedDomains = ["gmail.com", "indigobook.com"];
-            
-            // Проверка формата email
-            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-                emailError.textContent = "Некорректный формат email";
-                return;
-            }
+        // Отправка кода
+        function sendCode() {
+            const userEmail = email.value.trim();
             
             // Проверка домена
-            const domain = email.split('@')[1];
-            if (!allowedDomains.includes(domain)) {
-                emailError.textContent = "Только email @gmail.com или @indigobook.com";
+            if (!userEmail.endsWith("@gmail.com") && !userEmail.endsWith("@indigobook.com")) {
+                emailError.textContent = "Только Gmail или Indigobook!";
                 return;
             }
+
+            // Генерация 6-значного кода
+            generatedCode = Math.floor(100000 + Math.random() * 900000);
             
-            // Если проверки пройдены
-            emailError.textContent = "";
-            emailError.innerHTML = '<span class="success">Email принят! Отправляем данные...</span>';
-            
-            // Отправка данных на FormSubmit
-            const formData = new FormData();
-            formData.append("email", email);
-            formData.append("_subject", "Новая регистрация");
-            formData.append("_next", window.location.href + "?success=true");
-            
-            fetch("https://formsubmit.co/ajax/ВАШ_РЕАЛЬНЫЙ_EMAIL@example.com", {
+            // Отправка через FormSubmit
+            fetch("https://formsubmit.co/ajax/ВАШ_EMAIL@gmail.com", {
                 method: "POST",
-                body: formData
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    email: userEmail,
+                    _subject: "Код подтверждения",
+                    _autoresponse: `Ваш код подтверждения: ${generatedCode}`,
+                    _template: "plain"
+                })
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    window.location.href = "thanks.html";
+                    document.getElementById("step1").classList.remove("active");
+                    document.getElementById("step2").classList.add("active");
                 }
             })
             .catch(error => {
-                emailError.textContent = "Ошибка отправки: " + error.message;
+                emailError.textContent = "Ошибка отправки: " + error;
             });
-        });
+        }
+
+        // Проверка кода
+        function verifyCode() {
+            const userCode = document.getElementById("verificationCode").value;
+            
+            if (userCode === generatedCode.toString()) {
+                alert("Email подтвержден!");
+                // Здесь можно отправить данные на сервер
+            } else {
+                codeError.textContent = "Неверный код!";
+            }
+        }
     </script>
 </body>
 </html>
