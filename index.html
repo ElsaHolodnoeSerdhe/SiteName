@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Регистрация</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background: #4285F4;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+        }
+        .error {
+            color: red;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        .success {
+            color: green;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Регистрация</h1>
+    <p>Только для email @gmail.com или @indigobook.com</p>
+
+    <form id="registrationForm">
+        <div class="form-group">
+            <input type="email" id="email" name="email" placeholder="Введите ваш email" required>
+            <div id="emailError" class="error"></div>
+        </div>
+
+        <button type="submit">Зарегистрироваться</button>
+    </form>
+
+    <script>
+        const form = document.getElementById("registrationForm");
+        const emailInput = document.getElementById("email");
+        const emailError = document.getElementById("emailError");
+
+        form.addEventListener("submit", function(e) {
+            e.preventDefault();
+            
+            const email = emailInput.value.trim().toLowerCase();
+            const allowedDomains = ["gmail.com", "indigobook.com"];
+            
+            // Проверка формата email
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                emailError.textContent = "Некорректный формат email";
+                return;
+            }
+            
+            // Проверка домена
+            const domain = email.split('@')[1];
+            if (!allowedDomains.includes(domain)) {
+                emailError.textContent = "Только email @gmail.com или @indigobook.com";
+                return;
+            }
+            
+            // Если проверки пройдены
+            emailError.textContent = "";
+            emailError.innerHTML = '<span class="success">Email принят! Отправляем данные...</span>';
+            
+            // Отправка данных на FormSubmit
+            const formData = new FormData();
+            formData.append("email", email);
+            formData.append("_subject", "Новая регистрация");
+            formData.append("_next", window.location.href + "?success=true");
+            
+            fetch("https://formsubmit.co/ajax/ВАШ_РЕАЛЬНЫЙ_EMAIL@example.com", {
+                method: "POST",
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.href = "thanks.html";
+                }
+            })
+            .catch(error => {
+                emailError.textContent = "Ошибка отправки: " + error.message;
+            });
+        });
+    </script>
+</body>
+</html>
